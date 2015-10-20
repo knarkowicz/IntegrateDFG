@@ -51,6 +51,7 @@ uint16_t FloatToHalf( float ff )
 		f.u -= round_mask;
 		if (f.u > f16infty.u) f.u = f16infty.u; // Clamp to signed infinity if overflowed
 
+		o = uint16_t( f.u >> 13 ); // Take the bits!
 	}
 
 	o |= sign >> 16;
@@ -76,7 +77,7 @@ float GSmithCorrelated( float roughness, float ndotv, float ndotl )
 int main()
 {
     float const MATH_PI         = 3.14159f;
-    unsigned const LUT_WIDTH    = 64;
+    unsigned const LUT_WIDTH    = 32;
     unsigned const LUT_HEIGHT   = 64;
     unsigned const sampleNum    = 128;
 
