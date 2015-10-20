@@ -51,13 +51,9 @@ uint32_t const DDS_HEADER_FLAGS_TEXTURE         = 0x00001007; // DDSD_CAPS | DDS
 uint32_t const DDS_HEADER_FLAGS_PITCH           = 0x00000008;
 uint32_t const DDS_SURFACE_FLAGS_TEXTURE        = 0x00001000; // DDSCAPS_TEXTURE
 uint32_t const DDS_RESOURCE_DIMENSION_TEXTURE2D = 3;
-uint32_t const DDS_FORMAT_R32G32B32A32_FLOAT    = 2;
 
-bool SaveDDS( char const* path, unsigned width, unsigned height, void const* data )
+bool SaveDDS( char const* path, unsigned format, unsigned texelSizeInBytes, unsigned width, unsigned height, void const* data )
 {
-    uint32_t const dxgiFormat       = DDS_FORMAT_R32G32B32A32_FLOAT;
-    uint32_t const texelSizeInBytes = 4 * sizeof( float );
-
     FILE* f = fopen( path, "wb" );
     if ( !f )
     {
@@ -82,7 +78,7 @@ bool SaveDDS( char const* path, unsigned width, unsigned height, void const* dat
 
     DDS_HEADER_DXT10 hdrDX10;
     memset( &hdrDX10, 0, sizeof( hdrDX10 ) );
-    hdrDX10.dxgiFormat          = dxgiFormat;
+    hdrDX10.dxgiFormat          = format;
     hdrDX10.resourceDimension   = DDS_RESOURCE_DIMENSION_TEXTURE2D;
     hdrDX10.arraySize           = 1;
     fwrite( &hdrDX10, sizeof( hdrDX10 ), 1, f );
