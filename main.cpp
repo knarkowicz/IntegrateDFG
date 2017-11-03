@@ -5,6 +5,8 @@
 #include "dds.h"
 #include "csv.h"
 
+float const MATH_PI = 3.14159f;
+
 uint32_t ReverseBits( uint32_t v )
 {
     v = ( ( v >> 1 ) & 0x55555555 ) | ( ( v & 0x55555555 ) << 1 );
@@ -58,17 +60,11 @@ uint16_t FloatToHalf( float ff )
 	return o;
 }
 
-float GSmith( float roughness, float ndotv, float ndotl )
+float Vis( float roughness, float ndotv, float ndotl )
 {
-    float const m2   = roughness * roughness;
-    float const visV = ndotv + sqrt( ndotv * ( ndotv - ndotv * m2 ) + m2 );
-    float const visL = ndotl + sqrt( ndotl * ( ndotl - ndotl * m2 ) + m2 );
-    return 1.0f / ( visV * visL );
-}
-
-float GSmithCorrelated( float roughness, float ndotv, float ndotl )
-{
-	float m2	= roughness * roughness;
+	// GSmith correlated
+	float m     = roughness * roughness;
+	float m2	= m * m;
 	float visV	= ndotl * sqrt( ndotv * ( ndotv - ndotv * m2 ) + m2 );
 	float visL	= ndotv * sqrt( ndotl * ( ndotl - ndotl * m2 ) + m2 );
 	return 0.5f / ( visV + visL );
@@ -76,10 +72,9 @@ float GSmithCorrelated( float roughness, float ndotv, float ndotl )
 
 int main()
 {
-    float const MATH_PI         = 3.14159f;
     unsigned const LUT_WIDTH    = 32;
     unsigned const LUT_HEIGHT   = 64;
-    unsigned const sampleNum    = 128;
+    unsigned const sampleNum    = 512;
 
     float lutDataRGBA32F[ LUT_WIDTH * LUT_HEIGHT * 4 ];
 	uint16_t lutDataRG16F[ LUT_WIDTH * LUT_HEIGHT * 2 ];
@@ -90,8 +85,7 @@ int main()
 
         for ( unsigned x = 0; x < LUT_WIDTH; ++x )
         {
-            float const gloss       = ( x + 0.5f ) / LUT_WIDTH;
-            float const roughness   = powf( 1.0f - gloss, 2.0f );
+            float const roughness = ( x + 0.5f ) / LUT_WIDTH;
 
             float const vx = sqrtf( 1.0f - ndotv * ndotv );
             float const vy = 0.0f;
@@ -109,7 +103,7 @@ int main()
                 float const phi         = 2.0f * MATH_PI * e1;
                 float const cosPhi      = cosf( phi );
                 float const sinPhi      = sinf( phi );
-                float const cosTheta    = sqrtf( ( 1.0f - e2 ) / ( 1.0f + ( roughness * roughness - 1.0f ) * e2 ) );
+                float const cosTheta    = sqrtf( ( 1.0f - e2 ) / ( 1.0f + ( roughness * roughness * roughness * roughness - 1.0f ) * e2 ) );
                 float const sinTheta    = sqrtf( 1.0f - cosTheta * cosTheta );
 
                 float const hx  = sinTheta * cosf( phi );
@@ -121,18 +115,18 @@ int main()
                 float const ly  = 2.0f * vdh * hy - vy;
                 float const lz  = 2.0f * vdh * hz - vz;
 
-                float const ndotl = std::max( lz,   0.0f );
-                float const ndoth = std::max( hz,   0.0f );
-                float const vdoth = std::max( vdh,  0.0f );
+                float const ndotl = std::max( lz,  0.0f );
+                float const ndoth = std::max( hz,  0.0f );
+                float const vdoth = std::max( vdh, 0.0f );
 
                 if ( ndotl > 0.0f )
                 {
-                    float const gsmith      = GSmithCorrelated( roughness, ndotv, ndotl );
-                    float const ndotlVisPDF = ndotl * gsmith * ( 4.0f * vdoth / ndoth );
+                    float const vis         = Vis( roughness, ndotv, ndotl );
+                    float const ndotlVisPDF = ndotl * vis * ( 4.0f * vdoth / ndoth );
                     float const fc          = powf( 1.0f - vdoth, 5.0f );
 
-                    scale   += ndotlVisPDF * ( 1.0f - fc );
-                    bias    += ndotlVisPDF * fc;
+                    scale += ndotlVisPDF * ( 1.0f - fc );
+                    bias  += ndotlVisPDF * fc;
                 }
             }
             scale /= sampleNum;
