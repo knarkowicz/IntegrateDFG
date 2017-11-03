@@ -19,55 +19,55 @@ uint32_t ReverseBits( uint32_t v )
 
 union FP32
 {
-	unsigned	u;
-	float		f;
+    unsigned    u;
+    float       f;
 };
 
 // https://gist.github.com/rygorous/2156668
 uint16_t FloatToHalf( float ff )
 {
-	FP32 f32infty = { 255 << 23 };
-	FP32 f16infty = { 31 << 23 };
-	FP32 magic = { 15 << 23 };
-	unsigned sign_mask = 0x80000000u;
-	unsigned round_mask = ~0xfffu; 
+    FP32 f32infty = { 255 << 23 };
+    FP32 f16infty = { 31 << 23 };
+    FP32 magic = { 15 << 23 };
+    unsigned sign_mask = 0x80000000u;
+    unsigned round_mask = ~0xfffu; 
 
-	uint16_t o = 0;
-	FP32 f;
-	f.f = ff;
+    uint16_t o = 0;
+    FP32 f;
+    f.f = ff;
 
-	unsigned sign = f.u & sign_mask;
-	f.u ^= sign;
+    unsigned sign = f.u & sign_mask;
+    f.u ^= sign;
 
-	// NOTE all the integer compares in this function can be safely
-	// compiled into signed compares since all operands are below
-	// 0x80000000. Important if you want fast straight SSE2 code
-	// (since there's no unsigned PCMPGTD).
+    // NOTE all the integer compares in this function can be safely
+    // compiled into signed compares since all operands are below
+    // 0x80000000. Important if you want fast straight SSE2 code
+    // (since there's no unsigned PCMPGTD).
 
-	if (f.u >= f32infty.u) // Inf or NaN (all exponent bits set)
-		o = (f.u > f32infty.u) ? 0x7e00 : 0x7c00; // NaN->qNaN and Inf->Inf
-	else // (De)normalized number or zero
-	{
-		f.u &= round_mask;
-		f.f *= magic.f;
-		f.u -= round_mask;
-		if (f.u > f16infty.u) f.u = f16infty.u; // Clamp to signed infinity if overflowed
+    if (f.u >= f32infty.u) // Inf or NaN (all exponent bits set)
+        o = (f.u > f32infty.u) ? 0x7e00 : 0x7c00; // NaN->qNaN and Inf->Inf
+    else // (De)normalized number or zero
+    {
+        f.u &= round_mask;
+        f.f *= magic.f;
+        f.u -= round_mask;
+        if (f.u > f16infty.u) f.u = f16infty.u; // Clamp to signed infinity if overflowed
 
-		o = uint16_t( f.u >> 13 ); // Take the bits!
-	}
+        o = uint16_t( f.u >> 13 ); // Take the bits!
+    }
 
-	o |= sign >> 16;
-	return o;
+    o |= sign >> 16;
+    return o;
 }
 
 float Vis( float roughness, float ndotv, float ndotl )
 {
-	// GSmith correlated
-	float m     = roughness * roughness;
-	float m2	= m * m;
-	float visV	= ndotl * sqrt( ndotv * ( ndotv - ndotv * m2 ) + m2 );
-	float visL	= ndotv * sqrt( ndotl * ( ndotl - ndotl * m2 ) + m2 );
-	return 0.5f / ( visV + visL );
+    // GSmith correlated
+    float m     = roughness * roughness;
+    float m2    = m * m;
+    float visV  = ndotl * sqrt( ndotv * ( ndotv - ndotv * m2 ) + m2 );
+    float visL  = ndotv * sqrt( ndotl * ( ndotl - ndotl * m2 ) + m2 );
+    return 0.5f / ( visV + visL );
 }
 
 int main()
@@ -77,7 +77,7 @@ int main()
     unsigned const sampleNum    = 512;
 
     float lutDataRGBA32F[ LUT_WIDTH * LUT_HEIGHT * 4 ];
-	uint16_t lutDataRG16F[ LUT_WIDTH * LUT_HEIGHT * 2 ];
+    uint16_t lutDataRG16F[ LUT_WIDTH * LUT_HEIGHT * 2 ];
 
     for ( unsigned y = 0; y < LUT_HEIGHT; ++y )
     {
@@ -123,10 +123,10 @@ int main()
                 {
                     float const vis         = Vis( roughness, ndotv, ndotl );
                     float const ndotlVisPDF = ndotl * vis * ( 4.0f * vdoth / ndoth );
-                    float const fc          = powf( 1.0f - vdoth, 5.0f );
+                    float const fresnel     = powf( 1.0f - vdoth, 5.0f );
 
-                    scale += ndotlVisPDF * ( 1.0f - fc );
-                    bias  += ndotlVisPDF * fc;
+                    scale += ndotlVisPDF * ( 1.0f - fresnel );
+                    bias  += ndotlVisPDF * fresnel;
                 }
             }
             scale /= sampleNum;
@@ -137,13 +137,13 @@ int main()
             lutDataRGBA32F[ x * 4 + y * LUT_WIDTH * 4 + 2 ] = 0.0f;
             lutDataRGBA32F[ x * 4 + y * LUT_WIDTH * 4 + 3 ] = 0.0f;
 
-			lutDataRG16F[ x * 2 + y * LUT_WIDTH * 2 + 0 ] = FloatToHalf( scale );
-			lutDataRG16F[ x * 2 + y * LUT_WIDTH * 2 + 1 ] = FloatToHalf( bias );
+            lutDataRG16F[ x * 2 + y * LUT_WIDTH * 2 + 0 ] = FloatToHalf( scale );
+            lutDataRG16F[ x * 2 + y * LUT_WIDTH * 2 + 1 ] = FloatToHalf( bias );
         }
     }   
 
     SaveDDS( "integrateDFG_RGBA32F.dds", DDS_FORMAT_R32G32B32A32_FLOAT, 16, LUT_WIDTH, LUT_HEIGHT, lutDataRGBA32F );
-	SaveDDS( "integrateDFG_RG16F.dds", DDS_FORMAT_R16G16_FLOAT, 4, LUT_WIDTH, LUT_HEIGHT, lutDataRG16F );
+    SaveDDS( "integrateDFG_RG16F.dds", DDS_FORMAT_R16G16_FLOAT, 4, LUT_WIDTH, LUT_HEIGHT, lutDataRG16F );
     SaveCSV( "ndotv.csv", LUT_WIDTH );
     SaveCSV( "gloss.csv", LUT_HEIGHT );
     SaveCSV( "scale.csv", lutDataRGBA32F, LUT_WIDTH, LUT_HEIGHT, 0 );
