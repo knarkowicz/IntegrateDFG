@@ -74,7 +74,7 @@ int main()
 {
     unsigned const LUT_WIDTH    = 32;
     unsigned const LUT_HEIGHT   = 64;
-    unsigned const sampleNum    = 512;
+    unsigned const maxSampleNum = 512;
 
     float lutDataRGBA32F[ LUT_WIDTH * LUT_HEIGHT * 4 ];
     uint16_t lutDataRG16F[ LUT_WIDTH * LUT_HEIGHT * 2 ];
@@ -86,6 +86,8 @@ int main()
         for ( unsigned x = 0; x < LUT_WIDTH; ++x )
         {
             float const roughness = ( x + 0.5f ) / LUT_WIDTH;
+            float const m = roughness * roughness;
+            float const m2 = m * m;
 
             float const vx = sqrtf( 1.0f - ndotv * ndotv );
             float const vy = 0.0f;
@@ -94,16 +96,16 @@ int main()
             float scale = 0.0f;
             float bias  = 0.0f;
 
-            
-            for ( unsigned i = 0; i < sampleNum; ++i )
+            unsigned validSampleNum = 0;
+            for ( unsigned i = 0; i < maxSampleNum; ++i )
             {
-                float const e1 = (float) i / sampleNum;
+                float const e1 = (float) i / maxSampleNum;
                 float const e2 = (float) ( (double) ReverseBits( i ) / (double) 0x100000000LL );
 
                 float const phi         = 2.0f * MATH_PI * e1;
                 float const cosPhi      = cosf( phi );
                 float const sinPhi      = sinf( phi );
-                float const cosTheta    = sqrtf( ( 1.0f - e2 ) / ( 1.0f + ( roughness * roughness * roughness * roughness - 1.0f ) * e2 ) );
+                float const cosTheta    = sqrtf( ( 1.0f - e2 ) / ( 1.0f + ( m2 - 1.0f ) * e2 ) );
                 float const sinTheta    = sqrtf( 1.0f - cosTheta * cosTheta );
 
                 float const hx  = sinTheta * cosf( phi );
@@ -127,10 +129,11 @@ int main()
 
                     scale += ndotlVisPDF * ( 1.0f - fresnel );
                     bias  += ndotlVisPDF * fresnel;
+                    ++validSampleNum;
                 }
             }
-            scale /= sampleNum;
-            bias  /= sampleNum;
+            scale /= validSampleNum;
+            bias  /= validSampleNum;
 
             lutDataRGBA32F[ x * 4 + y * LUT_WIDTH * 4 + 0 ] = scale;
             lutDataRGBA32F[ x * 4 + y * LUT_WIDTH * 4 + 1 ] = bias;
