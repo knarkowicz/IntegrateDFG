@@ -72,9 +72,9 @@ float Vis( float roughness, float ndotv, float ndotl )
 
 int main()
 {
-    unsigned const LUT_WIDTH    = 32;
-    unsigned const LUT_HEIGHT   = 64;
-    unsigned const maxSampleNum = 512;
+    unsigned const LUT_WIDTH  = 32;
+    unsigned const LUT_HEIGHT = 64;
+    unsigned const sampleNum  = 512;
 
     float lutDataRGBA32F[ LUT_WIDTH * LUT_HEIGHT * 4 ];
     uint16_t lutDataRG16F[ LUT_WIDTH * LUT_HEIGHT * 2 ];
@@ -96,10 +96,9 @@ int main()
             float scale = 0.0f;
             float bias  = 0.0f;
 
-            unsigned validSampleNum = 0;
-            for ( unsigned i = 0; i < maxSampleNum; ++i )
+            for ( unsigned i = 0; i < sampleNum; ++i )
             {
-                float const e1 = (float) i / maxSampleNum;
+                float const e1 = (float) i / sampleNum;
                 float const e2 = (float) ( (double) ReverseBits( i ) / (double) 0x100000000LL );
 
                 float const phi         = 2.0f * MATH_PI * e1;
@@ -129,11 +128,10 @@ int main()
 
                     scale += ndotlVisPDF * ( 1.0f - fresnel );
                     bias  += ndotlVisPDF * fresnel;
-                    ++validSampleNum;
                 }
             }
-            scale /= validSampleNum;
-            bias  /= validSampleNum;
+            scale /= sampleNum;
+            bias  /= sampleNum;
 
             lutDataRGBA32F[ x * 4 + y * LUT_WIDTH * 4 + 0 ] = scale;
             lutDataRGBA32F[ x * 4 + y * LUT_WIDTH * 4 + 1 ] = bias;
